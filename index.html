@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Beautify Power Expression | Power Platform</title>
+    <style>
+        .function {
+            color: darkblue;
+            font-weight: bold;
+        }
+
+        .cell {
+            color: green;
+        }
+
+        .string {
+            color: brown;
+        }
+
+        .number {
+            color: darkred;
+        }
+
+        .operator {
+            color: #000;
+        }
+
+        h1 {
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.lime.min.css" />
+</head>
+<body>
+    <main>
+        <h1>
+            <span>🧮 Beautify Power Expression</span>
+            <button onclick="pasteInput()">Paste</button>
+        </h1>
+        <textarea onkeyup="formatFormula()" id="input">If( LookUp(Categories, CategoryName = ThisItem.Category, Discount) > 0, If( LookUp(Customers, CustomerID = User.CustomerID, Tier) = "Platinum", ThisItem.Price * 0.9,10)</textarea>
+        <fieldset role="group">
+            <button onclick="formatFormula()">Format</button>
+            <button onclick="copyOutput()">Copy</button>
+            <button onclick="downloadOutput()">Download</button>
+        </fieldset>
+        <div id="output" contenteditable="true" style="white-space: pre-wrap; background: #f9f9f9; border: 1px solid #ccc; padding: 10px; min-height: 100px;"></div>
+    </main>
+    <footer><p style="text-align:center">Built with ❤️ by <a href="https://www.linkedin.com/in/ashishvishwakarma-ashv/">AshV</a></p></footer>
+    <script>
+        function highlightToken(token) {
+            if (/^[A-Z]+$/i.test(token)) return `<span class="function">${token}</span>`;
+            if (/^"[^"]*"$/i.test(token)) return `<span class="string">${token}</span>`;
+            if (/^[A-Z]+\d+(:[A-Z]+\d+)?$/i.test(token)) return `<span class="cell">${token}</span>`;
+            if (/^\d+(\.\d+)?$/.test(token)) return `<span class="number">${token}</span>`;
+            if (/^[=><*/+-]+$/.test(token)) return `<span class="operator">${token}</span>`;
+            return token;
+        }
+
+        function formatPowerFormula(formula) {
+            let indentLevel = 0;
+            let result = '';
+            const indent = () => '  '.repeat(indentLevel);
+
+            let i = 0;
+            while (i < formula.length) {
+                let char = formula[i];
+
+                if (/[A-Z]/i.test(char)) {
+                    let name = '';
+                    while (/[A-Z0-9_]/i.test(formula[i])) name += formula[i++];
+                    if (formula[i] === '(') {
+                        result += `\n${indent()}${highlightToken(name)}(`;
+                        indentLevel++;
+                        result += `\n${indent()}`;
+                        i++;
+                        continue;
+                    } else {
+                        result += highlightToken(name);
+                        continue;
+                    }
+                }
+
+                if (char === '(') {
+                    result += '(\n';
+                    indentLevel++;
+                    result += indent();
+                } else if (char === ')') {
+                    indentLevel--;
+                    result += `\n${indent()})`;
+                } else if (char === ',') {
+                    result += ',\n' + indent();
+                } else if (char === '"') {
+                    let str = '"';
+                    i++;
+                    while (i < formula.length && formula[i] !== '"') {
+                        str += formula[i++];
+                    }
+                    str += '"';
+                    i++;
+                    result += highlightToken(str);
+                    continue;
+                } else if (/\s/.test(char)) {
+                    result += char;
+                } else if (/[=><*/+-]/.test(char)) {
+                    result += highlightToken(char);
+                } else {
+                    result += char;
+                }
+
+                i++;
+            }
+
+            return result.trim();
+        }
+
+        function formatFormula() {
+            try {
+                const formula = minifyFormula(document.getElementById('input').value);
+                const output = formatPowerFormula(formula);
+                document.getElementById('output').innerHTML = output;
+            } catch (err) {
+                alert("Failed to beautify, please verify syntax.");
+            }
+        }
+
+        function copyOutput() {
+            const temp = document.createElement("textarea");
+            temp.value = document.getElementById("output").innerText;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand("copy");
+            document.body.removeChild(temp);
+            alert("Copied to clipboard!");
+        }
+
+        function downloadOutput() {
+            const text = document.getElementById("output").innerText;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "formatted-formula.txt";
+            a.click();
+        }
+
+        let minifyFormula = input => input.replace(/\s+/g, '').replace(/;+$/, '');
+
+        async function pasteInput() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('input').value = text;
+                formatFormula();
+            } catch (err) {
+                alert("Failed to read clipboard, please try pasting manually.");
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => { setTimeout(() => { formatFormula(); }, 2500) });
+    </script>
+</body>
+</html>
